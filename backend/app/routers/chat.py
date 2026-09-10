@@ -11,11 +11,16 @@ from app.services.ia import responder_ia, responder_reglas
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 limiter = Limiter(key_func=get_remote_address)
 
+def _limit(rate):
+    if settings.modo_test:
+        return lambda f: f
+    return limiter.limit(rate)
+
 class ChatEntrada(BaseModel):
     mensajes: list[dict] = Field(max_length=10)
 
 @router.post("")
-@limiter.limit("20/hour")
+@_limit("20/hour")
 async def chat(request: Request, datos: ChatEntrada):
     for m in datos.mensajes:
         if len(m.get("contenido", "")) > 500:

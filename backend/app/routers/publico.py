@@ -14,6 +14,11 @@ from app.services.crisis import en_horario_laboral
 router = APIRouter(prefix="/api/publico", tags=["publico"])
 limiter = Limiter(key_func=get_remote_address)
 
+def _limit(rate):
+    if settings.modo_test:
+        return lambda f: f
+    return limiter.limit(rate)
+
 @router.get("/config")
 async def config():
     ajustes = await db.get_db()["ajustes"].find_one({"_id": "ajustes"})
@@ -28,7 +33,7 @@ async def config():
     }
 
 @router.get("/huecos")
-@limiter.limit("30/hour")
+@_limit("30/hour")
 async def huecos(request: Request, modalidad: str, desde: str, dias: int = 14):
     if modalidad not in ("online", "presencial"):
         raise HTTPException(422, "Modalidad inválida")
@@ -57,7 +62,7 @@ async def huecos(request: Request, modalidad: str, desde: str, dias: int = 14):
     ]}
 
 @router.post("/citas", status_code=201)
-@limiter.limit("10/hour")
+@_limit("10/hour")
 async def reservar(request: Request, datos: CitaEntrada):
     db_c = db.get_db()
     ajustes = await db_c["ajustes"].find_one({"_id": "ajustes"})
@@ -102,14 +107,17 @@ async def consultar_cita(token: str):
 
 @router.post("/citas/{token}/cancelar")
 async def cancelar_cita(token: str):
+    db_c = db.get_db()
+    cita = await db_c["citas"].find_one({"token": token})
+    if not cita:
+        raise HTTPException(404, "Cita no encontrada")
+    if cita["estado"] == "cancelada":
+        raise HTTPException(409, "Cita ya cancelada")
     try:
-        db_c = db.get_db()
         ajustes = await db_c["ajustes"].find_one({"_id": "ajustes"})
         ahora = datetime.now(timezone.utc)
         return await cancelar_por_paciente(token, ajustes, ahora)
     except ValueError as e:
-        if str(e) == "no_encontrada":
-            raise HTTPException(404, "Cita no encontrada")
         if str(e) == "fuera_plazo":
             raise HTTPException(403, "Fuera de plazo de cancelación")
         raise HTTPException(422, str(e))
@@ -170,11 +178,11 @@ async def descargar_ics(token: str):
     return Response(content=ics, media_type="text/calendar", headers={"Content-Disposition": f"attachment; filename=cita-{token[:8]}.ics"})
 
 @router.post("/contacto-urgente")
-@limiter.limit("3/hour")
+@_limit("3/hour")
 async def contacto_urgente(request: Request, datos: ContactoUrgente):
     ahora = datetime.now(timezone.utc)
     ajustes = await db.get_db()["ajustes"].find_one({"_id": "ajustes"})
     en_horario = en_horario_laboral(ahora, ajustes)
-    texto = f"🚨 Contacto urgente: {datos.nombre} ({datos.telegram})"
+    texto = f"🚨 Contacto urgente: {datos.nombre} ({datos.telefono})"
     await telegram_enviar(texto)
     return {"ok": True, "en_horario": en_horario}

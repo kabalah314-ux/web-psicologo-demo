@@ -1,27 +1,29 @@
 # ESTADO DEL PROYECTO — lo actualiza HARNESS/check.py. Solo edita a mano la sección NOTAS.
 
-FASE_ACTUAL: 2
+FASE_ACTUAL: 3
 
 ## Progreso
 - [x] Fase 0 — Esqueleto y arnés
 - [x] Fase 1 — Motor de agenda
-- [ ] Fase 2 — API pública + notificaciones
+- [x] Fase 2 — API pública + notificaciones
 - [ ] Fase 3 — API admin + tareas
 - [ ] Fase 4 — Frontend
 - [ ] Fase 5 — Chat IA
 - [ ] Fase 6 — Operación y despliegue
 
 ## Último check
-2026-09-10 22:58 · Fase 1 · COMPLETADA
-- PASS · existe backend/app/services/agenda.py
-- PASS · existe backend/app/services/crisis.py
-- PASS · existe backend/app/services/ics.py
-- PASS · existe backend/app/services/video.py
-- PASS · existe backend/tests/test_agenda.py
-- PASS · existe backend/tests/test_crisis.py
-- PASS · calcular_huecos lunes 2026-05-04 → 9 huecos exactos
-- PASS · pytest tests/test_agenda.py tests/test_crisis.py (≥12 tests, todos PASS)
-- PASS · índice único parcial citas.inicio (estado=activa)
-- PASS · sembrar_defecto idempotente: ajustes + 10 reglas
+2026-09-10 23:04 · Fase 2 · COMPLETADA
+- PASS · existe backend/app/schemas.py
+- PASS · existe backend/app/services/notify.py
+- PASS · existe backend/app/services/citas.py
+- PASS · existe backend/app/routers/publico.py
+- PASS · existe backend/tests/conftest.py
+- PASS · existe backend/tests/test_citas.py
+- PASS · backend/app/services/citas.py contiene 'DuplicateKeyError'
+- PASS · backend/tests/test_citas.py contiene 'gather'
+- PASS · 8 rutas definidas en la API
+- PASS · honeypot 400, consentimiento false 422, dias>30 422
+- PASS · pytest tests/test_citas.py (≥12 tests, todos PASS)
+- PASS · Telegram real al psicólogo [red]
 
 ## NOTAS

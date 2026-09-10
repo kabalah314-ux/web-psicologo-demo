@@ -19,7 +19,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Tu Espacio API", lifespan=lifespan)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+if not settings.modo_test:
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
