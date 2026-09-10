@@ -1,6 +1,6 @@
 # ESTADO DEL PROYECTO — lo actualiza HARNESS/check.py. Solo edita a mano la sección NOTAS.
 
-FASE_ACTUAL: 5
+FASE_ACTUAL: 6
 
 ## Progreso
 - [x] Fase 0 — Esqueleto y arnés
@@ -8,42 +8,21 @@ FASE_ACTUAL: 5
 - [x] Fase 2 — API pública + notificaciones
 - [x] Fase 3 — API admin + tareas
 - [x] Fase 4 — Frontend
-- [ ] Fase 5 — Chat IA
+- [x] Fase 5 — Chat IA
 - [ ] Fase 6 — Operación y despliegue
 
 ## Último check
-2026-09-10 23:48 · Fase 4 · COMPLETADA
-- PASS · existe frontend/src/api.ts
-- PASS · existe frontend/src/estilos.css
-- PASS · existe frontend/src/pages/Home.tsx
-- PASS · existe frontend/src/pages/Gestionar.tsx
-- PASS · existe frontend/src/pages/Admin.tsx
-- PASS · existe frontend/src/components/ModalReserva.tsx
-- PASS · existe frontend/src/components/Chat.tsx
-- PASS · existe frontend/src/components/admin/Login.tsx
-- PASS · existe frontend/src/components/admin/AgendaSemana.tsx
-- PASS · existe frontend/src/components/admin/Disponibilidad.tsx
-- PASS · existe frontend/src/components/admin/Bloqueos.tsx
-- PASS · existe frontend/src/components/admin/Ajustes.tsx
-- PASS · frontend/src/api.ts contiene '/api/publico/huecos'
-- PASS · frontend/src/api.ts contiene '/api/publico/citas'
-- PASS · frontend/src/api.ts contiene '/api/chat'
-- PASS · frontend/src/api.ts contiene '/api/admin/login'
-- PASS · frontend/src/api.ts contiene '/api/admin/ia/estado'
-- PASS · frontend/src/api.ts contiene 'VITE_API_URL'
-- PASS · frontend/src/components/ModalReserva.tsx contiene 'name="website"'
-- PASS · frontend/src/components/ModalReserva.tsx contiene 'consentimiento'
-- PASS · frontend/src/components/Chat.tsx contiene '024'
-- PASS · frontend/src/components/Chat.tsx contiene '112'
-- PASS · frontend/src/components/Chat.tsx contiene 'abrir_agenda'
-- PASS · frontend/src/components/Chat.tsx contiene 'contacto_urgente'
-- PASS · frontend/src/App.tsx contiene '/gestionar/:token'
-- PASS · frontend/src/App.tsx contiene '/admin'
-- PASS · 'No tramita citas reales' eliminado de frontend/src
-- PASS · 'Agenda de demostración' eliminado de frontend/src
-- PASS · 'datos ficticios' eliminado de frontend/src
-- PASS · 'localStorage' eliminado de frontend/src
-- PASS · `npm run build` en frontend
-- PASS · existe frontend/dist/index.html
+2026-09-10 23:50 · Fase 5 · COMPLETADA
+- PASS · existe backend/app/services/ia.py
+- PASS · existe backend/app/routers/chat.py
+- PASS · existe backend/tests/test_ia.py
+- PASS · backend/app/services/ia.py contiene 'openrouter.ai/api/v1/chat/completions'
+- PASS · backend/app/services/ia.py contiene 'openrouter.ai/api/v1/key'
+- PASS · backend/app/routers/chat.py contiene 'detectar_crisis'
+- PASS · 1 rutas definidas en la API
+- PASS · crisis → tipo crisis, 024, y la IA NO se llama
+- PASS · [ABRIR_AGENDA] se convierte en acción
+- PASS · pytest tests/test_ia.py (≥5 tests, todos PASS)
+- PASS · petición real a OpenRouter (gasta 1 del cupo) [red]
 
 ## NOTAS
