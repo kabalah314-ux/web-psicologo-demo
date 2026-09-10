@@ -1,0 +1,85 @@
+:root {
+  --bg: #faf8f3;
+  --paper: #ffffff;
+  --ink: #233d36;
+  --muted: #626e67;
+  --green: #244b42;
+  --green-dark: #19382f;
+  --sage: #e8eee5;
+  --line: #dce2d9;
+  --radius: 24px;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  line-height: 1.65;
+}
+
+.container { width: min(1160px, 90%); margin-inline: auto; }
+.section { padding: 94px 0; }
+.eyebrow {
+  display: block;
+  margin-bottom: 20px;
+  color: var(--green);
+  font-size: .76rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .17em;
+}
+h1, h2 { font-family: Georgia, serif; font-weight: 400; }
+h1 { font-size: clamp(3rem, 6.4vw, 6.1rem); line-height: 1.05; letter-spacing: -.055em; }
+h2 { font-size: clamp(2.2rem, 4vw, 3.8rem); line-height: 1.13; letter-spacing: -.035em; }
+p { color: var(--muted); }
+
+.btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 99px;
+  padding: 14px 22px;
+  background: var(--green);
+  color: white;
+  text-decoration: none;
+  font-size: .93rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+}
+.btn:hover { background: var(--green-dark); transform: translateY(-2px); }
+.btn.secondary { background: transparent; color: var(--green); border-color: var(--line); }
+.btn.secondary:hover { background: var(--sage); }
+.btn.light { background: var(--bg); color: var(--green); }
+.btn.compact { padding: 9px 16px; font-size: .83rem; }
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 30px;
+}
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+.field { margin-bottom: 18px; }
+.field label { display: block; margin-bottom: 7px; font-size: .9rem; font-weight: 600; }
+input, select {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #b8c5ba;
+  border-radius: 12px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+
+@media (max-width: 680px) {
+  .grid-3, .two-cols { grid-template-columns: 1fr; }
+  .section { padding: 65px 0; }
+}

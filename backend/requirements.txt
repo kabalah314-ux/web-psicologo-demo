@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+motor
+pydantic[email]
+pydantic-settings
+httpx
+PyJWT
+slowapi
+pytest
+pytest-asyncio
+asgi-lifespan
