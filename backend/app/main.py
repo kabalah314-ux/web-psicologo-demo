@@ -6,6 +6,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app import db
+from app.routers import publico, chat, admin, tareas
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -27,6 +28,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(publico.router)
+app.include_router(chat.router)
+app.include_router(admin.router_login)
+app.include_router(admin.router_admin)
+app.include_router(tareas.router)
 
 @app.get("/api/salud")
 async def salud():
