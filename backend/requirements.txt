@@ -9,3 +9,4 @@ slowapi
 pytest
 pytest-asyncio
 asgi-lifespan
+tzdata

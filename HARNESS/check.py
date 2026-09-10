@@ -22,8 +22,9 @@ def escribir_estado(fase, resultados, completada):
         txt = txt.replace(f"- [ ] Fase {fase} —", f"- [x] Fase {fase} —")
         txt = re.sub(r"FASE_ACTUAL:\s*\d+", f"FASE_ACTUAL: {min(fase + 1, 6)}", txt)
     lineas = [f"{datetime.datetime.now():%Y-%m-%d %H:%M} · Fase {fase} · " + ("COMPLETADA" if completada else "EN CURSO")]
-    lineas += [f"- {'PASS' if ok else 'FAIL'} · {n}" + ("" if ok else f" → {str(msg)[:300]}") for n, ok, msg in resultados]
-    txt = re.sub(r"## Último check\n.*?(?=\n## NOTAS)", "## Último check\n" + "\n".join(lineas) + "\n", txt, flags=re.S)
+    lineas += [f"- {'PASS' if ok else 'FAIL'} · {n}" + ("" if ok else f" -> {str(msg)[:300]}") for n, ok, msg in resultados]
+    bloque = "## Último check\n" + "\n".join(lineas) + "\n"
+    txt = re.sub(r"## Último check\n.*?(?=\n## NOTAS)", lambda m: bloque, txt, flags=re.S)
     STATE.write_text(txt, encoding="utf-8")
 
 def main():
