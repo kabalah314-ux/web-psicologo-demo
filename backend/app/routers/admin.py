@@ -1,144 +1,181 @@
-from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Header
-from pydantic import BaseModel
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.config import settings
 from app import db
-from app.services.security import login, crear_jwt, admin_requerido
+from app.schemas import CitaEntrada
+from app.services.security import crear_token, verificar_token
+from app.services.notify import telegram_enviar
 
-router_login = APIRouter(prefix="/api/admin", tags=["admin-login"])
-router_admin = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(admin_requerido)])
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+limiter = Limiter(key_func=get_remote_address)
 
-class LoginEntrada(BaseModel):
-    usuario: str
-    password: str
+def _limit(rate):
+    if settings.modo_test:
+        return lambda f: f
+    return limiter.limit(rate)
 
-@router_login.post("/login")
-async def login_admin(datos: LoginEntrada):
-    if not login(datos.usuario, datos.password):
-        raise HTTPException(401, "Credenciales incorrectas")
-    return {"token": crear_jwt(), "expira_en": "12h"}
 
-@router_admin.get("/citas")
-async def admin_citas(desde: str = None, hasta: str = None):
-    q = {}
-    if desde:
-        q["inicio"] = {"$gte": datetime.fromisoformat(desde.replace("Z", "+00:00"))}
-    if hasta:
-        q.setdefault("inicio", {})["$lte"] = datetime.fromisoformat(hasta.replace("Z", "+00:00"))
-    citas = await db.get_db()["citas"].find(q).sort("inicio", 1).to_list(1000)
-    return [{"id": str(c["_id"]), "token": c["token"], "nombre": c["nombre"], "email": c["email"],
-             "telefono": c.get("telefono", ""), "inicio": c["inicio"].isoformat(), "fin": c["fin"].isoformat(),
-             "modalidad": c["modalidad"], "tipo_sesion": c["tipo_sesion"], "estado": c["estado"]} for c in citas]
+@router.post("/login")
+@_limit("5/minute")
+async def login(request: Request, datos: dict):
+    usuario = datos.get("usuario", "")
+    password = datos.get("password", "")
+    if usuario == settings.ADMIN_USUARIO and password == settings.ADMIN_PASSWORD:
+        return {"token": crear_token(usuario)}
+    raise HTTPException(401, "Credenciales inválidas")
 
-class PatchCita(BaseModel):
-    estado: str | None = None
-    nuevo_inicio: datetime | None = None
 
-@router_admin.patch("/citas/{cita_id}")
-async def patch_cita(cita_id: str, datos: PatchCita):
+@router.get("/citas")
+async def listar_citas(usuario: str = Depends(verificar_token)):
+    citas = await db.get_db()["citas"].find({}).sort("inicio", -1).to_list(200)
+    return {"citas": [
+        {
+            "_id": str(c["_id"]),
+            "inicio": c["inicio"].isoformat().replace("+00:00", "Z"),
+            "fin": c["fin"].isoformat().replace("+00:00", "Z"),
+            "nombre": c["nombre"],
+            "email": c["email"],
+            "telefono": c.get("telefono", ""),
+            "tipo_sesion": c["tipo_sesion"],
+            "modalidad": c["modalidad"],
+            "estado": c["estado"],
+        }
+        for c in citas
+    ]}
+
+
+@router.patch("/citas/{id}")
+async def actualizar_cita(id: str, datos: dict, usuario: str = Depends(verificar_token)):
     from bson import ObjectId
+    try:
+        oid = ObjectId(id)
+    except Exception:
+        raise HTTPException(422, "ID inválido")
     db_c = db.get_db()
-    cita = await db_c["citas"].find_one({"_id": ObjectId(cita_id)})
+    cita = await db_c["citas"].find_one({"_id": oid})
     if not cita:
         raise HTTPException(404, "Cita no encontrada")
-
-    ahora = datetime.now(timezone.utc)
-    update = {}
-
-    if datos.estado:
-        update["estado"] = datos.estado
-        update["cancelado_en"] = ahora
-        update["cancelado_por"] = "admin"
-
-    if datos.nuevo_inicio:
-        nuevo = datos.nuevo_inicio.astimezone(timezone.utc) if datos.nuevo_inicio.tzinfo else datos.nuevo_inicio.replace(tzinfo=timezone.utc)
-        duracion = cita["fin"] - cita["inicio"]
-        update["inicio"] = nuevo
-        update["fin"] = nuevo + duracion
-
-    await db_c["citas"].update_one({"_id": ObjectId(cita_id)}, {"$set": update})
-
-    if datos.estado == "cancelada" or datos.nuevo_inicio:
-        ajustes = await db_c["ajustes"].find_one({"_id": "ajustes"})
-        from app.services.notify import email_enviar
-        from app.services.citas import _html_cancelacion, _html_reagendada
-        if datos.estado == "cancelada":
-            html = _html_cancelacion(cita, ajustes)
-            await email_enviar(cita["email"], "Cita cancelada — Tu Espacio", html)
-        elif datos.nuevo_inicio:
-            html = _html_reagendada({"inicio": datos.nuevo_inicio, "token": cita["token"]}, ajustes)
-            await email_enviar(cita["email"], "Cita cambiada — Tu Espacio", html)
-
+    campos_permitidos = {"estado", "tipo_sesion", "modalidad"}
+    actualizaciones = {k: v for k, v in datos.items() if k in campos_permitidos}
+    if actualizaciones:
+        await db_c["citas"].update_one({"_id": oid}, {"$set": actualizaciones})
     return {"ok": True}
 
-@router_admin.get("/disponibilidad")
-async def get_disponibilidad():
+
+@router.get("/disponibilidad")
+async def obtener_disponibilidad(usuario: str = Depends(verificar_token)):
     reglas = await db.get_db()["disponibilidad"].find({}).to_list(100)
-    return [{"id": str(r["_id"]), "dia_semana": r["dia_semana"], "inicio": r["inicio"], "fin": r["fin"], "modalidades": r["modalidades"]} for r in reglas]
+    return {"disponibilidad": [
+        {
+            "_id": str(r["_id"]),
+            "dia_semana": r["dia_semana"],
+            "hora_inicio": r["hora_inicio"],
+            "hora_fin": r["hora_fin"],
+            "modalidad": r.get("modalidad", ""),
+        }
+        for r in reglas
+    ]}
 
-class ReglaDisponibilidad(BaseModel):
-    dia_semana: int
-    inicio: str
-    fin: str
-    modalidades: list[str]
 
-class PutDisponibilidad(BaseModel):
-    reglas: list[ReglaDisponibilidad]
-
-@router_admin.put("/disponibilidad")
-async def put_disponibilidad(datos: PutDisponibilidad):
-    for r in datos.reglas:
-        if r.inicio >= r.fin:
-            raise HTTPException(422, f"Inicio debe ser menor que fin para día {r.dia_semana}")
+@router.put("/disponibilidad")
+async def actualizar_disponibilidad(datos: dict, usuario: str = Depends(verificar_token)):
     db_c = db.get_db()
     await db_c["disponibilidad"].delete_many({})
-    await db_c["disponibilidad"].insert_many([r.model_dump() for r in datos.reglas])
-    return {"ok": True, "reglas": len(datos.reglas)}
+    reglas = datos.get("disponibilidad", [])
+    for r in reglas:
+        await db_c["disponibilidad"].insert_one(r)
+    return {"ok": True, "total": len(reglas)}
 
-@router_admin.get("/bloqueos")
-async def get_bloqueos():
-    bloq = await db.get_db()["bloqueos"].find({}).sort("inicio", 1).to_list(100)
-    return [{"id": str(b["_id"]), "inicio": b["inicio"].isoformat(), "fin": b["fin"].isoformat(), "motivo": b.get("motivo", "")} for b in bloq]
 
-class BloqueoEntrada(BaseModel):
-    inicio: datetime
-    fin: datetime
-    motivo: str = ""
+@router.get("/bloqueos")
+async def listar_bloqueos(usuario: str = Depends(verificar_token)):
+    bloqueos = await db.get_db()["bloqueos"].find({}).to_list(100)
+    return {"bloqueos": [
+        {
+            "_id": str(b["_id"]),
+            "inicio": b["inicio"].isoformat().replace("+00:00", "Z"),
+            "fin": b["fin"].isoformat().replace("+00:00", "Z"),
+            "motivo": b.get("motivo", ""),
+        }
+        for b in bloqueos
+    ]}
 
-@router_admin.post("/bloqueos", status_code=201)
-async def crear_bloqueo(datos: BloqueoEntrada):
-    ini = datos.inicio.astimezone(timezone.utc) if datos.inicio.tzinfo else datos.inicio.replace(tzinfo=timezone.utc)
-    fin = datos.fin.astimezone(timezone.utc) if datos.fin.tzinfo else datos.fin.replace(tzinfo=timezone.utc)
-    await db.get_db()["bloqueos"].insert_one({"inicio": ini, "fin": fin, "motivo": datos.motivo})
-    return {"ok": True}
 
-@router_admin.delete("/bloqueos/{bloqueo_id}")
-async def eliminar_bloqueo(bloqueo_id: str):
+@router.post("/bloqueos")
+async def crear_bloqueo(datos: dict, usuario: str = Depends(verificar_token)):
+    from datetime import datetime as dt
+    inicio = dt.fromisoformat(datos["inicio"].replace("Z", "+00:00"))
+    fin = dt.fromisoformat(datos["fin"].replace("Z", "+00:00"))
+    if fin <= inicio:
+        raise HTTPException(422, "Fin debe ser posterior a inicio")
+    doc = {
+        "inicio": inicio,
+        "fin": fin,
+        "motivo": datos.get("motivo", ""),
+    }
+    result = await db.get_db()["bloqueos"].insert_one(doc)
+    return {"ok": True, "_id": str(result.inserted_id)}
+
+
+@router.delete("/bloqueos/{id}")
+async def eliminar_bloqueo(id: str, usuario: str = Depends(verificar_token)):
     from bson import ObjectId
-    await db.get_db()["bloqueos"].delete_one({"_id": ObjectId(bloqueo_id)})
+    try:
+        oid = ObjectId(id)
+    except Exception:
+        raise HTTPException(422, "ID inválido")
+    result = await db.get_db()["bloqueos"].delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Bloqueo no encontrado")
     return {"ok": True}
 
-@router_admin.get("/ajustes")
-async def get_ajustes():
-    a = await db.get_db()["ajustes"].find_one({"_id": "ajustes"})
-    return {k: v for k, v in a.items() if k != "_id"}
 
-@router_admin.put("/ajustes")
-async def put_ajustes(datos: dict):
-    if datos.get("plazo_cancelacion_horas", 0) < 0:
-        raise HTTPException(422, "Plazo de cancelación no puede ser negativo")
-    if datos.get("duracion_min", 0) < 15:
-        raise HTTPException(422, "Duración mínima 15 minutos")
-    await db.get_db()["ajustes"].update_one({"_id": "ajustes"}, {"$set": datos})
+@router.get("/ajustes")
+async def obtener_ajustes(usuario: str = Depends(verificar_token)):
+    ajustes = await db.get_db()["ajustes"].find_one({"_id": "ajustes"})
+    if not ajustes:
+        raise HTTPException(404, "Ajustes no encontrados")
+    ajustes.pop("_id", None)
+    return ajustes
+
+
+@router.put("/ajustes")
+async def actualizar_ajustes(datos: dict, usuario: str = Depends(verificar_token)):
+    campos_permitidos = {
+        "nombre_profesional", "tipos_sesion", "modalidades",
+        "plazo_cancelacion_horas", "direccion_presencial",
+        "textos", "zona_horaria", "duracion_sesion_min",
+        "max_citas_dia", "buffer_entre_citas_min",
+    }
+    actualizaciones = {k: v for k, v in datos.items() if k in campos_permitidos}
+    if not actualizaciones:
+        raise HTTPException(422, "Sin campos válidos para actualizar")
+    # Validate plazo_cancelacion_horas
+    if "plazo_cancelacion_horas" in actualizaciones:
+        plazo = actualizaciones["plazo_cancelacion_horas"]
+        if not isinstance(plazo, (int, float)) or plazo < 0:
+            raise HTTPException(422, "plazo_cancelacion_horas inválido")
+    await db.get_db()["ajustes"].update_one(
+        {"_id": "ajustes"}, {"$set": actualizaciones}
+    )
     return {"ok": True}
 
-@router_admin.post("/telegram/test")
-async def telegram_test():
-    from app.services.notify import telegram_enviar
-    ok = await telegram_enviar("Prueba OK")
+
+@router.post("/telegram/test")
+async def test_telegram(usuario: str = Depends(verificar_token)):
+    ok = await telegram_enviar("✅ Test de conexión — Tu Espacio")
     return {"ok": ok}
 
-@router_admin.get("/ia/estado")
-async def ia_estado():
-    from app.services.ia import estado_openrouter
-    return await estado_openrouter()
+
+@router.get("/ia/estado")
+async def estado_ia(usuario: str = Depends(verificar_token)):
+    tiene_clave = bool(settings.OPENROUTER_API_KEY)
+    modelos_raw = settings.OPENROUTER_MODELOS
+    modelos = [m.strip() for m in modelos_raw.split(",") if m.strip()] if modelos_raw else []
+    return {
+        "is_free_tier": not tiene_clave or len(modelos) == 0,
+        "modelos_disponibles": modelos,
+        "openrouter_configurado": tiene_clave,
+    }

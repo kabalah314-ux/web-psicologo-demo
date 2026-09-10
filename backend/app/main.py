@@ -12,6 +12,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    db.cerrar()
     await db.crear_indices()
     await db.sembrar_defecto()
     yield
@@ -32,8 +33,7 @@ app.add_middleware(
 
 app.include_router(publico.router)
 app.include_router(chat.router)
-app.include_router(admin.router_login)
-app.include_router(admin.router_admin)
+app.include_router(admin.router)
 app.include_router(tareas.router)
 
 @app.get("/api/salud")

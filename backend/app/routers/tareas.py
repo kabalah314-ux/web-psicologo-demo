@@ -1,68 +1,83 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, Header, HTTPException
-import secrets
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.config import settings
 from app import db
+from app.services.security import verificar_token
 from app.services.notify import telegram_enviar, email_enviar
-from app.services.citas import _html_recordatorio
 
 router = APIRouter(prefix="/api/tareas", tags=["tareas"])
 
-async def cron_requerido(x_cron_secret: str | None = Header(default=None)):
-    if not x_cron_secret or not secrets.compare_digest(x_cron_secret, settings.CRON_SECRET):
-        raise HTTPException(401, "Secreto incorrecto")
 
-@router.post("/recordatorios", dependencies=[Depends(cron_requerido)])
-async def recordatorios():
-    ahora = datetime.now(timezone.utc)
-    desde = ahora + timedelta(hours=23)
-    hasta = ahora + timedelta(hours=25)
+def _verificar_cron(request: Request):
+    auth = request.headers.get("authorization", "")
+    token = auth.replace("Bearer ", "")
+    if token != settings.CRON_SECRET:
+        raise HTTPException(401, "Cron secret inválido")
+
+
+@router.post("/recordatorios")
+async def recordatorios(request: Request):
+    _verificar_cron(request)
     db_c = db.get_db()
+    ahora = datetime.now(timezone.utc)
+    manana = ahora + timedelta(days=1)
     citas = await db_c["citas"].find({
         "estado": "activa",
-        "inicio": {"$gte": desde, "$lte": hasta},
-        "recordatorio_enviado": False
+        "inicio": {"$gte": ahora, "$lte": manana},
     }).to_list(100)
 
     enviados = 0
-    ajustes = await db_c["ajustes"].find_one({"_id": "ajustes"})
     for cita in citas:
-        html = _html_recordatorio(cita, ajustes)
-        ok = await email_enviar(cita["email"], "Recordatorio — Tu Espacio", html)
-        if ok:
-            await db_c["citas"].update_one({"_id": cita["_id"]}, {"$set": {"recordatorio_enviado": True}})
-            enviados += 1
+        ajustes = await db_c["ajustes"].find_one({"_id": "ajustes"})
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(ajustes["zona_horaria"])
+        inicio_local = cita["inicio"].astimezone(tz).strftime("%d/%m %H:%M")
+        html = f"""
+        <p>Hola {cita['nombre']},</p>
+        <p>Le recordamos que tiene una sesión mañana a las {inicio_local}.</p>
+        <p>Modalidad: {cita['modalidad']} — Tipo: {cita['tipo_sesion']}</p>
+        <p>Si necesita cancelar o reprogramar, puede hacerlo desde su enlace de gestión.</p>
+        <p>Un saludo,<br>{ajustes.get('nombre_profesional', 'Tu Espacio')}</p>
+        """
+        await email_enviar(cita["email"], "Recordatorio de sesión — Tu Espacio", html)
+        enviados += 1
 
-    return {"enviados": enviados}
+    return {"ok": True, "recordatorios_enviados": enviados}
 
-@router.post("/resumen-diario", dependencies=[Depends(cron_requerido)])
-async def resumen_diario():
-    ahora = datetime.now(timezone.utc)
+
+@router.post("/resumen-diario")
+async def resumen_diario(request: Request):
+    _verificar_cron(request)
     db_c = db.get_db()
-    ajustes = await db_c["ajustes"].find_one({"_id": "ajustes"})
-    from zoneinfo import ZoneInfo
-    tz = ZoneInfo(ajustes["zona_horaria"])
-    local_now = ahora.astimezone(tz)
-    inicio_dia = local_now.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+    ahora = datetime.now(timezone.utc)
+    inicio_dia = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
     fin_dia = inicio_dia + timedelta(days=1)
 
-    citas = await db_c["citas"].find({"estado": "activa", "inicio": {"$gte": inicio_dia, "$lt": fin_dia}}).to_list(100)
-    if citas:
-        lineas = [f"📅 Resumen del día ({len(citas)} citas):"]
-        for c in sorted(citas, key=lambda x: x["inicio"]):
-            local = c["inicio"].astimezone(tz).strftime("%H:%M")
-            lineas.append(f"• {local} — {c['nombre']} ({c['modalidad']})")
-        await telegram_enviar("\n".join(lineas))
-    else:
-        await telegram_enviar("📅 Sin citas hoy.")
+    citas_hoy = await db_c["citas"].find({
+        "inicio": {"$gte": inicio_dia, "$lt": fin_dia},
+    }).to_list(100)
 
-    return {"citas": len(citas)}
+    activas = [c for c in citas_hoy if c["estado"] == "activa"]
+    canceladas = [c for c in citas_hoy if c["estado"] == "cancelada"]
 
-@router.post("/purga", dependencies=[Depends(cron_requerido)])
-async def purga():
+    texto = (
+        f"📊 Resumen del día:\n"
+        f"Citas activas: {len(activas)}\n"
+        f"Citas canceladas: {len(canceladas)}\n"
+        f"Total: {len(citas_hoy)}"
+    )
+    await telegram_enviar(texto)
+
+    return {"ok": True, "activas": len(activas), "canceladas": len(canceladas)}
+
+
+@router.post("/purga")
+async def purga(request: Request):
+    _verificar_cron(request)
     db_c = db.get_db()
-    ajustes = await db_c["ajustes"].find_one({"_id": "ajustes"})
-    meses = ajustes.get("retencion_meses", 12)
-    limite = datetime.now(timezone.utc) - timedelta(days=meses * 30)
-    resultado = await db_c["citas"].delete_many({"fin": {"$lt": limite}, "estado": {"$ne": "activa"}})
-    return {"borradas": resultado.deleted_count}
+    hace_90_dias = datetime.now(timezone.utc) - timedelta(days=90)
+    result = await db_c["citas"].delete_many({
+        "estado": "cancelada",
+        "inicio": {"$lt": hace_90_dias},
+    })
+    return {"ok": True, "eliminadas": result.deleted_count}
