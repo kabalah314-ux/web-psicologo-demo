@@ -9,8 +9,7 @@ router = APIRouter(prefix="/api/tareas", tags=["tareas"])
 
 
 def _verificar_cron(request: Request):
-    auth = request.headers.get("authorization", "")
-    token = auth.replace("Bearer ", "")
+    token = request.headers.get("x-cron-secret", "")
     if token != settings.CRON_SECRET:
         raise HTTPException(401, "Cron secret inválido")
 
@@ -42,7 +41,7 @@ async def recordatorios(request: Request):
         await email_enviar(cita["email"], "Recordatorio de sesión — Tu Espacio", html)
         enviados += 1
 
-    return {"ok": True, "recordatorios_enviados": enviados}
+    return {"enviados": enviados}
 
 
 @router.post("/resumen-diario")
@@ -68,7 +67,7 @@ async def resumen_diario(request: Request):
     )
     await telegram_enviar(texto)
 
-    return {"ok": True, "activas": len(activas), "canceladas": len(canceladas)}
+    return {"citas": len(citas_hoy)}
 
 
 @router.post("/purga")
@@ -80,4 +79,4 @@ async def purga(request: Request):
         "estado": "cancelada",
         "inicio": {"$lt": hace_90_dias},
     })
-    return {"ok": True, "eliminadas": result.deleted_count}
+    return {"borradas": result.deleted_count}
