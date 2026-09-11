@@ -603,6 +603,13 @@ input:focus, select:focus {
   margin-bottom: 24px;
 }
 
+.success-link {
+  display: inline-block;
+  margin: 16px 0 4px;
+  color: var(--green);
+  font-weight: 600;
+}
+
 .error {
   color: #b33939;
   font-size: 0.86rem;
@@ -831,4 +838,3 @@ input:focus, select:focus {
     right: 14px;
   }
 }
-

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getHuecos, reservarCita, getConfig } from '../api'
+import { getHuecos, reservarCita, getConfig, getIcs } from '../api'
 import type { Hueco, Config } from '../tipos'
 
 interface Props {
@@ -21,6 +21,13 @@ function formatearHueco(isoLocal: string) {
   }
 }
 
+interface ReservaConfirmada {
+  token: string
+  inicio_local?: string
+  gestion_url: string
+  video_enlace?: string
+}
+
 export default function ModalReserva({ open, onClose, onReservada }: Props) {
   const [paso, setPaso] = useState<'form' | 'huecos' | 'ok' | 'error'>('form')
   const [config, setConfig] = useState<Config | null>(null)
@@ -33,8 +40,11 @@ export default function ModalReserva({ open, onClose, onReservada }: Props) {
   const [website, setWebsite] = useState('')
   const [huecos, setHuecos] = useState<Hueco[]>([])
   const [seleccionado, setSeleccionado] = useState<Hueco | null>(null)
+  const [reserva, setReserva] = useState<ReservaConfirmada | null>(null)
   const [cargando, setCargando] = useState(false)
+  const [descargandoIcs, setDescargandoIcs] = useState(false)
   const [error, setError] = useState('')
+  const [icsError, setIcsError] = useState('')
 
   useEffect(() => {
     if (open) {
@@ -76,11 +86,32 @@ export default function ModalReserva({ open, onClose, onReservada }: Props) {
         website,
       })
       onReservada(res.token)
+      setReserva(res)
       setPaso('ok')
     } catch (e: any) {
       setError(e.message || 'Error al reservar')
     }
     setCargando(false)
+  }
+
+  const descargarIcs = async () => {
+    if (!reserva?.token) return
+    setDescargandoIcs(true)
+    setIcsError('')
+    try {
+      const blob = await getIcs(reserva.token)
+      const url = URL.createObjectURL(blob)
+      const enlace = document.createElement('a')
+      enlace.href = url
+      enlace.download = 'cita-tu-espacio.ics'
+      document.body.appendChild(enlace)
+      enlace.click()
+      enlace.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      setIcsError('No se pudo preparar el calendario. Puedes usar el enlace de gestión del email.')
+    }
+    setDescargandoIcs(false)
   }
 
   if (!open) return null
@@ -165,7 +196,24 @@ export default function ModalReserva({ open, onClose, onReservada }: Props) {
         {paso === 'ok' && (
           <div className="modal-ok">
             <h2>¡Reserva confirmada!</h2>
+            {reserva?.inicio_local && <p><strong>{formatearHueco(reserva.inicio_local)}</strong></p>}
             <p>Recibirás un email con los detalles y un enlace para gestionar tu cita.</p>
+            <div className="modal-acciones">
+              {reserva?.gestion_url && (
+                <a className="btn" href={reserva.gestion_url} target="_blank" rel="noreferrer">
+                  Gestionar mi cita
+                </a>
+              )}
+              <button className="btn secondary" onClick={descargarIcs} disabled={descargandoIcs}>
+                {descargandoIcs ? 'Preparando...' : 'Añadir al calendario'}
+              </button>
+            </div>
+            {reserva?.video_enlace && (
+              <a className="success-link" href={reserva.video_enlace} target="_blank" rel="noreferrer">
+                Abrir enlace de videollamada
+              </a>
+            )}
+            {icsError && <p className="error">{icsError}</p>}
             <button className="btn" onClick={onClose}>Cerrar</button>
           </div>
         )}
