@@ -12,17 +12,15 @@ FASE_ACTUAL: 6
 - [ ] Fase 6 — Operación y despliegue
 
 ## Último check
-2026-09-10 23:50 · Fase 5 · COMPLETADA
-- PASS · existe backend/app/services/ia.py
-- PASS · existe backend/app/routers/chat.py
-- PASS · existe backend/tests/test_ia.py
-- PASS · backend/app/services/ia.py contiene 'openrouter.ai/api/v1/chat/completions'
-- PASS · backend/app/services/ia.py contiene 'openrouter.ai/api/v1/key'
-- PASS · backend/app/routers/chat.py contiene 'detectar_crisis'
-- PASS · 1 rutas definidas en la API
-- PASS · crisis → tipo crisis, 024, y la IA NO se llama
-- PASS · [ABRIR_AGENDA] se convierte en acción
-- PASS · pytest tests/test_ia.py (≥5 tests, todos PASS)
-- PASS · petición real a OpenRouter (gasta 1 del cupo) [red]
+2026-09-11 10:05 · Fase 6 · EN CURSO
+- FAIL · API_URL_PROD y FRONTEND_URL definidos (https) -> en backend/.env deben ser https://…: API_URL_PROD, FRONTEND_URL
+- FAIL · prod GET /api/salud -> excepción UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+- FAIL · prod GET /api/publico/config -> excepción UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+- FAIL · prod tareas sin secreto → 401 -> excepción UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+- FAIL · prod tareas con secreto → 200 -> excepción UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+- PASS · prod frontend 200
+- PASS · prod ruta profunda /gestionar/x → 200 (rewrite)
+- FAIL · prod CORS permite el frontend -> excepción UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+- PASS · CHECKLIST_CLIENTE.md ≥ 15 casillas
 
 ## NOTAS

@@ -8,7 +8,7 @@ export default function Faq({ onReservar }: { onReservar?: () => void }) {
   ]
 
   return (
-    <section className="section">
+    <section id="dudas" className="section">
       <div className="container">
         <span className="eyebrow">Preguntas frecuentes</span>
         <h2>Dudas comunes</h2>

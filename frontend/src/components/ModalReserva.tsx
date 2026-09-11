@@ -8,6 +8,19 @@ interface Props {
   onReservada: (token: string) => void
 }
 
+function formatearHueco(isoLocal: string) {
+  try {
+    const [fecha, hora] = isoLocal.split('T')
+    const [y, m, d] = fecha.split('-')
+    const fechaObj = new Date(Number(y), Number(m) - 1, Number(d))
+    const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    return `${dias[fechaObj.getDay()]} ${Number(d)} ${meses[fechaObj.getMonth()]} · ${hora}`
+  } catch {
+    return isoLocal
+  }
+}
+
 export default function ModalReserva({ open, onClose, onReservada }: Props) {
   const [paso, setPaso] = useState<'form' | 'huecos' | 'ok' | 'error'>('form')
   const [config, setConfig] = useState<Config | null>(null)
@@ -134,7 +147,7 @@ export default function ModalReserva({ open, onClose, onReservada }: Props) {
                     className={`hueco-btn ${seleccionado === h ? 'seleccionado' : ''}`}
                     onClick={() => setSeleccionado(h)}
                   >
-                    {h.inicio_local}
+                    {formatearHueco(h.inicio_local)}
                   </button>
                 ))}
               </div>

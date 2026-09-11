@@ -1,0 +1,43 @@
+﻿services:
+  - type: web
+    name: tuespacio-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB
+        value: tuespacio
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: API_URL_PROD
+        sync: false
+      - key: ADMIN_USUARIO
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: "Tu Espacio <onboarding@resend.dev>"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODELOS
+        value: ""
+      - key: MODO_TEST
+        value: "false"
+      - key: PYTHON_VERSION
+        value: "3.12.0"

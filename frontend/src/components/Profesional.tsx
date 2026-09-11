@@ -1,6 +1,6 @@
 export default function Profesional() {
   return (
-    <section className="section" style={{ background: 'var(--sage)' }}>
+    <section id="sobre-mi" className="section" style={{ background: 'var(--sage)' }}>
       <div className="container two-cols" style={{ alignItems: 'center' }}>
         <div>
           <span className="eyebrow">Sobre mí</span>
@@ -15,7 +15,10 @@ export default function Profesional() {
           </p>
         </div>
         <div className="profesional-foto">
-          <div className="foto-placeholder">Foto</div>
+          <div className="profile-placeholder">
+            <span className="monogram">ψ</span>
+            <p>Espacio seguro y profesional</p>
+          </div>
         </div>
       </div>
     </section>

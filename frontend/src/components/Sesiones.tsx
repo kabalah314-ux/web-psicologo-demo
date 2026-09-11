@@ -1,6 +1,6 @@
 export default function Sesiones() {
   return (
-    <section className="section" style={{ background: 'var(--sage)' }}>
+    <section id="sesiones" className="section" style={{ background: 'var(--sage)' }}>
       <div className="container">
         <span className="eyebrow">Tipos de sesión</span>
         <h2>¿Qué necesitas?</h2>

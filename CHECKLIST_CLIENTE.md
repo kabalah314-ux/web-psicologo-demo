@@ -1,42 +1,49 @@
-# Personalización por cliente — rellenar en la primera reunión
+# CHECKLIST_CLIENTE — Tu Espacio
 
-## Identidad y legal
-- [ ] Nombre y apellidos del profesional
-- [ ] Titulación habilitante y número de colegiación (web y emails)
-- [ ] Fotografía profesional con autorización
-- [ ] Enfoque de trabajo y áreas reales (sustituir las 6 de ejemplo)
-- [ ] Aviso legal, política de privacidad y texto de consentimiento revisados por su asesor RGPD
-- [ ] Registro de actividades de tratamiento actualizado
-- [ ] Dominio propio y email remitente (dominio verificado en Resend)
+## Cuenta y acceso
+- [ ] Cuenta de Render creada (backend)
+- [ ] Cuenta de Vercel creada (frontend)
+- [ ] Cuenta de MongoDB Atlas configurada
+- [ ] Cuenta de OpenRouter configurada
+- [ ] Cuenta de Resend configurada (email)
+- [ ] Bot de Telegram creado y configurado
 
-## Consulta
-- [ ] Modalidades ofrecidas (online / presencial / ambas)
-- [ ] Dirección de la consulta presencial y condiciones de acceso
-- [ ] Tipos de sesión, duración y tarifa de cada uno
-- [ ] Buffer entre sesiones (minutos)
-- [ ] Antelación mínima para reservar (horas)
-- [ ] Plazo de cancelación gratuita (horas) y texto de la política
-- [ ] Forma de pago (en consulta / Bizum / transferencia; Stripe es v2)
+## Backend (Render)
+- [ ] Servicio web creado en Render
+- [ ] Variables de entorno configuradas en Render
+- [ ] Servicio desplegado y funcionando
+- [ ] Endpoint /api/salud responde 200
+- [ ] CORS configurado con la URL del frontend
 
-## Agenda
-- [ ] Horario de disponibilidad por día de la semana
-- [ ] Bloqueos ya conocidos (vacaciones, festivos locales)
-- [ ] Horario laboral para el detector de crisis (cuándo se le puede avisar en directo)
-- [ ] Meses de retención de citas pasadas antes de borrarlas
+## Frontend (Vercel)
+- [ ] Proyecto importado en Vercel
+- [ ] Variable de entorno VITE_API_URL configurada
+- [ ] Despliegue automático activado
+- [ ] Frontend accesible en la URL de Vercel
+- [ ] Rutas profundas funcionan (vercel.json rewrite)
 
-## Herramientas
-- [ ] Enlace fijo de videollamada (Meet/Whereby) o sala Jitsi por cita
-- [ ] Telegram: bot creado, chat_id obtenido, "Probar Telegram" OK
-- [ ] Contraseña de admin entregada de forma segura
-- [ ] OpenRouter: 3 modelos :free elegidos; decidir si se cargan 10 $ (recomendado para uso real)
+## Dominio y DNS
+- [ ] Dominio personalizado configurado (opcional)
+- [ ] SSL/HTTPS habilitado
 
-## Chat IA y crisis
-- [ ] Revisar/ampliar la lista de patrones de crisis con el profesional
-- [ ] Teléfonos de emergencia a mostrar (024 y 112 por defecto; recursos de su comunidad)
-- [ ] Textos del asistente: saludo, respuesta a preguntas clínicas, tarifas
-- [ ] Teléfono de contacto urgente (si quiere que aparezca)
+## Funcionalidad verificada
+- [ ] Reserva de citas funciona end-to-end
+- [ ] Cancelación de citas funciona
+- [ ] Chat IA responde correctamente
+- [ ] Crisis detecta números de emergencia (024, 112)
+- [ ] Notificaciones Telegram funcionan
+- [ ] Email de confirmación se envía
+- [ ] Panel de administración accesible
+- [ ] Tareas programadas (recordatorios, resumen) ejecutan
 
-## Antes de publicar
-- [ ] MANUAL_06.md completo con el propio psicólogo
-- [ ] Sin textos "por definir" en la web
-- [ ] Cron configurado (recordatorios, resumen diario, purga, keep-alive)
+## Seguridad
+- [ ] Contraseña de admin cambiada por defecto
+- [ ] JWT_SECRET seguro (32+ caracteres)
+- [ ] CRON_SECRET seguro
+- [ ] Variables sensibles no expuestas en frontend
+- [ ] Rate limiting activado
+
+## Monitoreo
+- [ ] Logs de Render revisados
+- [ ] Errores de Sentry configurados (opcional)
+- [ ] Uptime monitoring configurado (opcional)

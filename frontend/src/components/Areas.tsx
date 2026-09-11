@@ -1,6 +1,6 @@
 export default function Areas() {
   return (
-    <section className="section">
+    <section id="areas" className="section">
       <div className="container">
         <span className="eyebrow">Áreas de intervención</span>
         <h2>Especialidades</h2>
